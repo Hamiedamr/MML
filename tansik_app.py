@@ -3,14 +3,22 @@
 import joblib
 from flask import Flask
 from flask import render_template,request
-app = Flask(__name__)
+import numpy as np
+from wtforms import Form, FloatField  , validators
+app=Flask(__name__)
+model = joblib.load('thanwy_model.sav')
+encoder = joblib.load('encoder.sav')
+
+
+class TansikForm(Form):
+    tansik = FloatField("tansik",[validators.NumberRange(min=205,max=410,message="Enter valid grade"),validators.DataRequired()])
 
 def top_ten(y_proba):
   y=y_proba[0]
 
   m=[]
   counter=0
-  while (counter<10):
+  while (counter<42):
       mx_class=y.argmax()
       counter+=1
       m.append(mx_class)
@@ -24,17 +32,13 @@ def predict(model,encoder,data):
     return result
 
 
-@app.route('/')
-def home():
-    return render_template('public/tansik.html')
-@app.route('/tansiky',methods=['POST','GET'])
+@app.route('/',methods=['POST','GET'])
 def tansiky():
-    if request.method == "GET":
-       return home()
-    elif request.method == "POST":
-        data = request.form['grade']
-        model = joblib.load('thanwy_model.sav')
-        encoder = joblib.load('encoder.sav')
+    form  = TansikForm(request.form)
+    if request.method == "POST" and  form.validate():
+        data = form.tansik.data
         result=predict(model,encoder,float(data))
-        return '<h1>'+str(result)+'</h1>'
+        return render_template('public/results.html',result=result)
+    return render_template('public/tansik.html',form=form)
     
+
